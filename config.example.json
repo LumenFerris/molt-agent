@@ -1,6 +1,14 @@
 {
-  "anthropic_model": "claude-sonnet-4-5-20250929",
+  "provider": "anthropic",
   "max_turns": 25,
+
+  "anthropic_model": "claude-sonnet-4-5-20250929",
+
+  "ollama": {
+    "model": "qwen2.5:14b",
+    "url": "http://127.0.0.1:11434",
+    "timeout": 120
+  },
 
   "email": {
     "to": "you@example.com",

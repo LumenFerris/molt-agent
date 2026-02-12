@@ -570,13 +570,17 @@ if data["success"]:
 `daily_digest.py` is an autonomous LLM agent that uses `molt.py` as a tool to explore Moltbook for philosophy content and email you a curated daily summary.
 
 ```
-cron (daily)  -->  daily_digest.py  -->  Claude API  <-->  molt.py (tool calls)
-                                              |
-                                              v
-                                        HTML email to you
+cron (daily)  -->  daily_digest.py  -->  LLM  <-->  molt.py (tool calls)
+                                         |
+                                         v
+                                   HTML email to you
 ```
 
-The LLM decides the strategy: which submolts to check, what to search for, which posts deserve deeper reading, and what makes the final cut. You configure the topics and email settings; it handles everything else.
+Supports two LLM providers:
+- **Anthropic (Claude)** -- cloud API, requires `pip install anthropic`
+- **Ollama** -- runs locally, zero dependencies, fully offline
+
+The LLM decides the strategy: which submolts to check, what to search for, which posts deserve deeper reading, and what makes the final cut. You configure the topics, provider, and email settings; it handles everything else.
 
 ### How It Works
 
@@ -587,6 +591,8 @@ The LLM decides the strategy: which submolts to check, what to search for, which
 A typical run takes 10-15 API turns and finishes in under a minute.
 
 ### Setup
+
+#### Option A: Anthropic (Claude) -- cloud
 
 **1. Install the one dependency:**
 
@@ -600,22 +606,55 @@ pip install anthropic
 export ANTHROPIC_API_KEY="sk-ant-..."
 ```
 
-**3. Create your config file:**
+**3. Create and edit your config:**
 
 ```bash
 cp config.example.json config.json
 ```
 
-**4. Edit `config.json` with your email SMTP credentials:**
+Set `"provider": "anthropic"` (the default) and fill in email SMTP credentials.
+
+#### Option B: Ollama -- local, zero dependencies
+
+**1. Install and start Ollama:**
+
+```bash
+# Install: https://ollama.com
+ollama serve
+```
+
+**2. Pull a model with tool-calling support:**
+
+```bash
+ollama pull qwen2.5:14b
+```
+
+**3. Create and edit your config:**
+
+```bash
+cp config.example.json config.json
+```
+
+Set `"provider": "ollama"` and fill in email SMTP credentials. No API keys needed.
+
+#### Config file
 
 ```json
 {
-  "anthropic_model": "claude-sonnet-4-5-20250929",
+  "provider": "ollama",
   "max_turns": 25,
+
+  "anthropic_model": "claude-sonnet-4-5-20250929",
+
+  "ollama": {
+    "model": "qwen2.5:14b",
+    "url": "http://127.0.0.1:11434",
+    "timeout": 120
+  },
 
   "email": {
     "to": "you@example.com",
-    "from": "lumenferris-digest@example.com",
+    "from": "digest@example.com",
     "smtp_host": "smtp.gmail.com",
     "smtp_port": 587,
     "smtp_user": "you@gmail.com",
@@ -639,8 +678,12 @@ cp config.example.json config.json
 
 | Field | Type | Default | Description |
 |-------|------|---------|-------------|
-| `anthropic_model` | string | `claude-sonnet-4-5-20250929` | Claude model to use. Sonnet is recommended for cost/quality balance. |
+| `provider` | string | `"anthropic"` | LLM provider: `"anthropic"` or `"ollama"`. |
 | `max_turns` | int | `25` | Safety cap on LLM tool-call turns per run. |
+| `anthropic_model` | string | `claude-sonnet-4-5-20250929` | Claude model (when provider=anthropic). |
+| `ollama.model` | string | `qwen2.5:14b` | Ollama model name (when provider=ollama). |
+| `ollama.url` | string | `http://127.0.0.1:11434` | Ollama server URL. |
+| `ollama.timeout` | int | `120` | Request timeout in seconds (local models can be slow). |
 | `email.to` | string | -- | Recipient email address. |
 | `email.from` | string | -- | Sender address (can be any valid address your SMTP allows). |
 | `email.smtp_host` | string | -- | SMTP server hostname. |
@@ -656,7 +699,7 @@ cp config.example.json config.json
 
 | Variable | Overrides | Description |
 |----------|-----------|-------------|
-| `ANTHROPIC_API_KEY` | -- | Required. Your Anthropic API key. |
+| `ANTHROPIC_API_KEY` | -- | Anthropic API key (required when provider=anthropic). |
 | `DIGEST_EMAIL_TO` | `email.to` | Override recipient without editing config. |
 | `DIGEST_DRY_RUN` | -- | Set to `"1"` to skip emailing and save HTML locally. |
 
@@ -750,15 +793,23 @@ The digest isn't limited to philosophy. Change `digest.topics` in `config.json`:
 
 The LLM uses these topics to guide its search strategy and content selection. The system prompt adapts automatically.
 
-### Cost
+### Choosing a Provider
 
-| Model | Estimated cost per run | Quality |
-|-------|:----------------------:|---------|
-| `claude-sonnet-4-5-20250929` | ~$0.02 - $0.05 | Recommended. Good summaries, fast. |
-| `claude-haiku-4-5-20251001` | ~$0.005 - $0.01 | Cheaper. Adequate for gathering, terser summaries. |
-| `claude-opus-4-6` | ~$0.15 - $0.30 | Best prose quality. Overkill for a daily digest. |
+| Provider | Cost | Speed | Quality | Dependencies |
+|----------|------|-------|---------|--------------|
+| **Ollama** (`qwen2.5:14b`) | Free | ~2-5 min (depends on GPU) | Good | None (stdlib only) |
+| **Ollama** (`llama3.1:8b`) | Free | ~1-3 min | Adequate | None (stdlib only) |
+| **Anthropic** (`claude-haiku-4-5`) | ~$0.005 - $0.01 | ~15s | Good | `anthropic` |
+| **Anthropic** (`claude-sonnet-4-5`) | ~$0.02 - $0.05 | ~20s | Great | `anthropic` |
+| **Anthropic** (`claude-opus-4-6`) | ~$0.15 - $0.30 | ~30s | Best | `anthropic` |
 
-To use a different model, set `anthropic_model` in `config.json`.
+**Ollama model requirements:** The model must support tool/function calling. Good options:
+- `qwen2.5:14b` -- recommended, strong tool-calling and summarization
+- `qwen2.5:7b` -- lighter, still capable
+- `llama3.1:8b` or `llama3.1:70b` -- good tool support
+- `mistral:7b` -- lightweight option
+
+To switch providers, set `"provider"` in `config.json`. To change models, set `anthropic_model` or `ollama.model`.
 
 ---
 
@@ -767,7 +818,7 @@ To use a different model, set `anthropic_model` in `config.json`.
 ```
 molt/
   molt.py               CLI tool (zero dependencies, Python stdlib only)
-  daily_digest.py       LLM-driven daily digest agent (requires: anthropic)
+  daily_digest.py       LLM-driven daily digest agent (anthropic or ollama)
   config.example.json   Configuration template -- copy to config.json
   config.json           Your local config (git-ignored, has SMTP credentials)
   moltbook.json         Registration response with API key for LumenFerris

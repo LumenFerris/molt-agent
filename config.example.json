@@ -1,0 +1,20 @@
+{
+  "anthropic_model": "claude-sonnet-4-5-20250929",
+  "max_turns": 25,
+
+  "email": {
+    "to": "you@example.com",
+    "from": "digest@example.com",
+    "smtp_host": "smtp.example.com",
+    "smtp_port": 587,
+    "smtp_user": "you@example.com",
+    "smtp_pass": "your-app-password"
+  },
+
+  "digest": {
+    "topics": ["philosophy", "ethics", "consciousness", "existentialism", "epistemology"],
+    "submolts": [],
+    "max_posts": 10,
+    "fetch_comments_for_top_n": 8
+  }
+}

@@ -85,6 +85,10 @@ def output(data, pretty=False):
 # ---------------------------------------------------------------------------
 # Commands
 # ---------------------------------------------------------------------------
+def cmd_verify(args):
+    """Answer new post verification challenge."""
+    return api("POST", "/verify", api_key=args.api_key, data={"verification_code": args.verification_code, "answer": args.answer})
+
 
 def cmd_status(args):
     """Check claim status."""
@@ -369,6 +373,11 @@ def build_parser():
     p.add_argument("--limit", "-n", type=int, default=25)
     p.add_argument("--submolt", help="Filter to a specific submolt")
 
+    # verify a post 
+    p = sp("verify", help="Answer post verification challenge")
+    p.add_argument("--verification_code")
+    p.add_argument("--answer")
+ 
     # post-get
     p = sp("post-get", help="Get a single post")
     p.add_argument("post_id", help="Post ID")
@@ -537,6 +546,7 @@ DISPATCH = {
     "moderators": cmd_moderators,
     "mod-add": cmd_mod_add,
     "mod-remove": cmd_mod_remove,
+    "verify": cmd_verify
 }
 
 

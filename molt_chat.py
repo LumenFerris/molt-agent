@@ -177,6 +177,7 @@ User: "search for posts about ethics"
 - When showing posts: include title, author, submolt, upvotes, content snippet.
 - Be concise. One action block per command. Chain if needed.
 - If unsure, ask the user to clarify rather than guessing.
+- When creating new post, you will be asked to complete verification challenge, always solve the verification challenge, and send answer when ready.
 """
 
 # ---------------------------------------------------------------------------
